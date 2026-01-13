@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Essay Trivia</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-deep: #0a0a0c;
+            --bg-surface: #14141a;
+            --bg-elevated: #1e1e28;
+            --accent-primary: #ff3366;
+            --accent-secondary: #00d4aa;
+            --accent-tertiary: #ffcc00;
+            --text-primary: #f5f5f7;
+            --text-secondary: #8a8a9a;
+            --text-muted: #5a5a6a;
+            --correct: #00d4aa;
+            --incorrect: #ff3366;
+            --border: rgba(255,255,255,0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Serif 4', Georgia, serif;
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Cinematic grain overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            opacity: 0.03;
+            pointer-events: none;
+            z-index: 1000;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 40px 24px;
+            position: relative;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: -30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 2px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+        }
+
+        .title {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(3rem, 10vw, 5rem);
+            letter-spacing: 0.05em;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            font-style: italic;
+            letter-spacing: 0.02em;
+        }
+
+        /* Progress bar */
+        .progress-container {
+            margin-bottom: 40px;
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-family: 'Bebas Neue', sans-serif;
+            letter-spacing: 0.1em;
+        }
+
+        .progress-bar {
+            height: 3px;
+            background: var(--bg-elevated);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
+            transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 2px;
+        }
+
+        /* Question card */
+        .question-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 48px 40px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .question-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, var(--accent-primary), var(--accent-tertiary), var(--accent-secondary));
+        }
+
+        .question-number {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 0.9rem;
+            color: var(--accent-primary);
+            letter-spacing: 0.15em;
+            margin-bottom: 16px;
+        }
+
+        .question-text {
+            font-size: 1.4rem;
+            line-height: 1.5;
+            margin-bottom: 36px;
+            color: var(--text-primary);
+        }
+
+        /* Answer options */
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option {
+            background: var(--bg-elevated);
+            border: 1px solid var(--border);
+            border-radius: 3px;
+            padding: 18px 24px;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .option::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 3px;
+            background: transparent;
+            transition: background 0.25s ease;
+        }
+
+        .option:hover:not(.disabled) {
+            background: rgba(255,255,255,0.04);
+            border-color: rgba(255,255,255,0.15);
+            transform: translateX(4px);
+        }
+
+        .option:hover:not(.disabled)::before {
+            background: var(--accent-secondary);
+        }
+
+        .option.disabled {
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .option.correct {
+            background: rgba(0, 212, 170, 0.1);
+            border-color: var(--correct);
+        }
+
+        .option.correct::before {
+            background: var(--correct);
+        }
+
+        .option.incorrect {
+            background: rgba(255, 51, 102, 0.1);
+            border-color: var(--incorrect);
+        }
+
+        .option.incorrect::before {
+            background: var(--incorrect);
+        }
+
+        .option-letter {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1rem;
+            color: var(--text-muted);
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            border-radius: 2px;
+            flex-shrink: 0;
+            transition: all 0.25s ease;
+        }
+
+        .option:hover:not(.disabled) .option-letter {
+            color: var(--accent-secondary);
+            border-color: var(--accent-secondary);
+        }
+
+        .option.correct .option-letter {
+            color: var(--correct);
+            border-color: var(--correct);
+        }
+
+        .option.incorrect .option-letter {
+            color: var(--incorrect);
+            border-color: var(--incorrect);
+        }
+
+        .option-text {
+            font-size: 1.05rem;
+            line-height: 1.4;
+        }
+
+        /* Feedback */
+        .feedback {
+            margin-top: 32px;
+            padding: 20px 24px;
+            background: var(--bg-elevated);
+            border-left: 3px solid var(--accent-secondary);
+            border-radius: 0 3px 3px 0;
+            display: none;
+        }
+
+        .feedback.show {
+            display: block;
+            animation: slideIn 0.4s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feedback-text {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        /* Next button */
+        .next-btn {
+            margin-top: 32px;
+            background: transparent;
+            border: 1px solid var(--text-primary);
+            color: var(--text-primary);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 0.15em;
+            padding: 14px 32px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .next-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--text-primary);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+
+        .next-btn:hover {
+            color: var(--bg-deep);
+        }
+
+        .next-btn:hover::before {
+            left: 0;
+        }
+
+        .next-btn.show {
+            display: inline-block;
+            animation: fadeIn 0.4s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* Results screen */
+        .results {
+            text-align: center;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+            animation: fadeIn 0.6s ease;
+        }
+
+        .results-score {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 8rem;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .results-label {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            margin-bottom: 40px;
+            font-style: italic;
+        }
+
+        .results-message {
+            font-size: 1.3rem;
+            color: var(--text-primary);
+            margin-bottom: 48px;
+            line-height: 1.6;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .restart-btn {
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border: none;
+            color: var(--bg-deep);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.1rem;
+            letter-spacing: 0.15em;
+            padding: 16px 48px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 32px rgba(255, 51, 102, 0.3);
+        }
+
+        /* Start screen */
+        .start-screen {
+            text-align: center;
+            padding: 60px 40px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+        }
+
+        .start-screen p {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            line-height: 1.7;
+            margin-bottom: 40px;
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .start-btn {
+            background: transparent;
+            border: 2px solid var(--accent-secondary);
+            color: var(--accent-secondary);
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 1.2rem;
+            letter-spacing: 0.2em;
+            padding: 18px 56px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .start-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent-secondary);
+            transition: left 0.3s ease;
+            z-index: -1;
+        }
+
+        .start-btn:hover {
+            color: var(--bg-deep);
+        }
+
+        .start-btn:hover::before {
+            left: 0;
+        }
+
+        /* Score display */
+        .score-display {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 0.9rem;
+            letter-spacing: 0.1em;
+            color: var(--accent-secondary);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: 24px 16px;
+            }
+            
+            .question-card {
+                padding: 32px 24px;
+            }
+            
+            .question-text {
+                font-size: 1.2rem;
+            }
+            
+            .option {
+                padding: 14px 18px;
+            }
+
+            .results-score {
+                font-size: 5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1 class="title">Video Essay Trivia</h1>
+            <p class="subtitle">Test your knowledge of the form</p>
+        </header>
+
+        <div id="start-screen" class="start-screen">
+            <p>From desktop documentaries to videographic criticism, the video essay has become one of the most vital forms of contemporary screen culture. How well do you know its history, practitioners, and techniques?</p>
+            <button class="start-btn" onclick="startGame()">Begin</button>
+        </div>
+
+        <div id="game-container" style="display: none;">
+            <div class="progress-container">
+                <div class="progress-info">
+                    <span id="question-counter">Question 1 of 12</span>
+                    <span id="score-display" class="score-display">Score: 0</span>
+                </div>
+                <div class="progress-bar">
+                    <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="question-card">
+                <div id="question-number" class="question-number">QUESTION 01</div>
+                <h2 id="question-text" class="question-text"></h2>
+                <div id="options" class="options"></div>
+                <div id="feedback" class="feedback">
+                    <p id="feedback-text" class="feedback-text"></p>
+                </div>
+                <button id="next-btn" class="next-btn" onclick="nextQuestion()">Next Question →</button>
+            </div>
+        </div>
+
+        <div id="results" class="results">
+            <div id="results-score" class="results-score">0%</div>
+            <p class="results-label">Final Score</p>
+            <p id="results-message" class="results-message"></p>
+            <button class="restart-btn" onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            {
+                question: "What is the term for a video essay that uses the critic's own voice to narrate analysis over film clips?",
+                options: ["Voiceover essay", "Explanatory video", "Audiovisual criticism", "Commentary track"],
+                correct: 0,
+                feedback: "The voiceover essay remains the most common format, with the essayist guiding viewers through visual evidence while building an argument—a direct descendant of the written film review adapted for the screen."
+            },
+            {
+                question: "The term 'videographic criticism' was popularized through which academic initiative?",
+                options: ["Sight & Sound Video Essays", "The Audiovisual Essay Project", "[in]Transition: Journal of Videographic Film & Moving Image Studies", "Every Frame a Painting"],
+                correct: 2,
+                feedback: "[in]Transition, founded in 2014, has been instrumental in legitimizing video essays as scholarly work, providing peer review and academic frameworks for videographic criticism."
+            },
+            {
+                question: "Which YouTube channel, run by Tony Zhou and Taylor Ramos, became one of the most influential video essay series before ending in 2016?",
+                options: ["Lessons from the Screenplay", "Nerdwriter1", "Every Frame a Painting", "Now You See It"],
+                correct: 2,
+                feedback: "Every Frame a Painting set a gold standard for accessible yet rigorous film analysis, influencing countless video essayists with its clear visual demonstrations of cinematic technique."
+            },
+            {
+                question: "What is a 'supercut' in video essay terminology?",
+                options: ["A compilation of similar moments from multiple sources", "A fast-paced montage with music", "A side-by-side comparison of scenes", "A frame-by-frame analysis"],
+                correct: 0,
+                feedback: "Supercuts compile recurring elements—tropes, phrases, or visual motifs—across multiple works to reveal patterns often invisible when viewing sources individually."
+            },
+            {
+                question: "What distinguishes a 'poetic' video essay from an 'explanatory' one?",
+                options: ["It uses music instead of voiceover", "It prioritizes mood and association over explicit argument", "It focuses exclusively on art cinema", "It avoids using any text or titles"],
+                correct: 1,
+                feedback: "Poetic video essays work through rhythm, juxtaposition, and sensory experience rather than verbal explanation—inviting viewers to feel connections rather than having them spelled out."
+            },
+            {
+                question: "The 'essay film' tradition, which influenced contemporary video essays, is often traced back to which work?",
+                options: ["Man with a Movie Camera (1929)", "Night and Fog (1956)", "Letter from Siberia (1957)", "Sans Soleil (1983)"],
+                correct: 2,
+                feedback: "Chris Marker's 'Letter from Siberia' is frequently cited as a foundational essay film for its reflexive commentary on its own images and the relationship between word and image."
+            },
+            {
+                question: "What technique involves placing two or more video clips side by side to highlight similarities or differences?",
+                options: ["Parallel editing", "Split-screen comparison", "Match cutting", "Dialectical montage"],
+                correct: 1,
+                feedback: "Split-screen comparisons are a signature technique in video essays, allowing direct visual analysis of framing, movement, or editing choices across different works."
+            },
+            {
+                question: "Which platform, launched in 2004, fundamentally enabled the rise of amateur video essays?",
+                options: ["Vimeo", "YouTube", "Dailymotion", "Metacafe"],
+                correct: 1,
+                feedback: "YouTube's accessibility and reach transformed who could create and distribute moving image criticism, democratizing a form that had previously required institutional support."
+            },
+            {
+                question: "What is a 'parametric' video essay?",
+                options: ["One that uses data visualization", "One structured around a single formal constraint or rule", "One that includes viewer interaction", "One generated by algorithm"],
+                correct: 1,
+                feedback: "Parametric video essays operate within self-imposed constraints—examining every cut in a film, or every use of a color—using systematic rigor to generate unexpected insights."
+            },
+            {
+                question: "Harun Farocki's influential essay films often examined what subject matter?",
+                options: ["Hollywood genre conventions", "Images of labor, war, and surveillance", "European art cinema aesthetics", "Documentary ethics"],
+                correct: 1,
+                feedback: "Farocki's work critically analyzed how images function within systems of production, military technology, and control—influencing generations of essay filmmakers and artists."
+            },
+            {
+                question: "The 'Sight & Sound' poll of the greatest video essays, first conducted in 2017, was organized by which publication?",
+                options: ["Film Comment", "Sight & Sound magazine", "Film Quarterly", "The video essay community itself"],
+                correct: 3,
+                feedback: "The poll was a grassroots effort organized by scholars and practitioners in the video essay community, including Kevin B. Lee and others, to canonize the form's achievements."
+            },
+            {
+                question: "What does 'fair use' typically allow video essayists to do in the United States?",
+                options: ["Use any copyrighted material without restriction", "Use copyrighted material for purposes like criticism and commentary", "Monetize videos using copyrighted clips", "Distribute full films with added commentary"],
+                correct: 1,
+                feedback: "Fair use provisions allow transformative use of copyrighted material for criticism, education, and commentary—though its boundaries remain contested and context-dependent."
+            }
+        ];
+
+        let currentQuestion = 0;
+        let score = 0;
+        let answered = false;
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            answered = false;
+            const q = questions[currentQuestion];
+            
+            document.getElementById('question-counter').textContent = `Question ${currentQuestion + 1} of ${questions.length}`;
+            document.getElementById('question-number').textContent = `QUESTION ${String(currentQuestion + 1).padStart(2, '0')}`;
+            document.getElementById('question-text').textContent = q.question;
+            document.getElementById('progress-fill').style.width = `${(currentQuestion / questions.length) * 100}%`;
+            document.getElementById('score-display').textContent = `Score: ${score}`;
+            
+            const optionsContainer = document.getElementById('options');
+            optionsContainer.innerHTML = '';
+            
+            const letters = ['A', 'B', 'C', 'D'];
+            q.options.forEach((option, index) => {
+                const optionEl = document.createElement('div');
+                optionEl.className = 'option';
+                optionEl.innerHTML = `
+                    <span class="option-letter">${letters[index]}</span>
+                    <span class="option-text">${option}</span>
+                `;
+                optionEl.onclick = () => selectOption(index);
+                optionsContainer.appendChild(optionEl);
+            });
+            
+            document.getElementById('feedback').classList.remove('show');
+            document.getElementById('next-btn').classList.remove('show');
+        }
+
+        function selectOption(index) {
+            if (answered) return;
+            answered = true;
+            
+            const q = questions[currentQuestion];
+            const options = document.querySelectorAll('.option');
+            
+            options.forEach((opt, i) => {
+                opt.classList.add('disabled');
+                if (i === q.correct) {
+                    opt.classList.add('correct');
+                } else if (i === index && index !== q.correct) {
+                    opt.classList.add('incorrect');
+                }
+            });
+            
+            if (index === q.correct) {
+                score++;
+                document.getElementById('score-display').textContent = `Score: ${score}`;
+            }
+            
+            document.getElementById('feedback-text').textContent = q.feedback;
+            document.getElementById('feedback').classList.add('show');
+            document.getElementById('next-btn').classList.add('show');
+            
+            if (currentQuestion === questions.length - 1) {
+                document.getElementById('next-btn').textContent = 'See Results →';
+            }
+        }
+
+        function nextQuestion() {
+            currentQuestion++;
+            
+            if (currentQuestion >= questions.length) {
+                showResults();
+            } else {
+                loadQuestion();
+            }
+        }
+
+        function showResults() {
+            document.getElementById('game-container').style.display = 'none';
+            document.getElementById('results').classList.add('show');
+            
+            const percentage = Math.round((score / questions.length) * 100);
+            document.getElementById('results-score').textContent = `${percentage}%`;
+            
+            let message;
+            if (percentage === 100) {
+                message = "Perfect score! You possess encyclopedic knowledge of the video essay form. Time to make your own?";
+            } else if (percentage >= 80) {
+                message = "Excellent! You clearly know your way around videographic criticism. A few more hours on Vimeo and you'll have it all.";
+            } else if (percentage >= 60) {
+                message = "Solid foundation! You know the essentials of video essay history. Keep exploring the archives.";
+            } else if (percentage >= 40) {
+                message = "You're on your way. Consider this an invitation to dive deeper into the rich world of video essays.";
+            } else {
+                message = "The world of video essays awaits your discovery. Start with Every Frame a Painting and work your way out.";
+            }
+            
+            document.getElementById('results-message').textContent = message;
+        }
+
+        function restartGame() {
+            currentQuestion = 0;
+            score = 0;
+            answered = false;
+            
+            document.getElementById('results').classList.remove('show');
+            document.getElementById('game-container').style.display = 'block';
+            document.getElementById('next-btn').textContent = 'Next Question →';
+            
+            loadQuestion();
+        }
+    </script>
+</body>
+</html>

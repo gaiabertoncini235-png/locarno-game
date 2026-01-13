@@ -1,0 +1,1284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pardo's Choice — A Locarno Film Festival Game</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --locarno-yellow: #FFD700;
+            --locarno-black: #1a1a1a;
+            --locarno-dark: #0d0d0d;
+            --accent: #ff6b35;
+            --text-light: #f5f5f5;
+            --text-muted: #888;
+        }
+        
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background: var(--locarno-dark);
+            color: var(--text-light);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Leopard spot pattern */
+        .leopard-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: radial-gradient(ellipse 30px 40px at 20% 30%, var(--locarno-yellow) 30%, transparent 50%),
+                              radial-gradient(ellipse 25px 35px at 60% 20%, var(--locarno-yellow) 30%, transparent 50%),
+                              radial-gradient(ellipse 35px 25px at 80% 60%, var(--locarno-yellow) 30%, transparent 50%),
+                              radial-gradient(ellipse 28px 38px at 40% 70%, var(--locarno-yellow) 30%, transparent 50%),
+                              radial-gradient(ellipse 32px 28px at 10% 80%, var(--locarno-yellow) 30%, transparent 50%),
+                              radial-gradient(ellipse 22px 32px at 90% 40%, var(--locarno-yellow) 30%, transparent 50%);
+            z-index: 0;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem 0;
+        }
+        
+        .pardo-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            filter: drop-shadow(0 0 20px rgba(255, 215, 0, 0.3));
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            background: linear-gradient(135deg, var(--locarno-yellow), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+        
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 215, 0, 0.1);
+        }
+        
+        .stat {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--locarno-yellow);
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        /* Progress indicators */
+        .progress-container {
+            margin-bottom: 2rem;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--locarno-yellow), var(--accent));
+            transition: width 0.5s ease;
+            border-radius: 3px;
+        }
+        
+        .films-remaining {
+            text-align: right;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 0.5rem;
+        }
+        
+        .films-remaining.warning {
+            color: var(--accent);
+        }
+        
+        .films-remaining.critical {
+            color: #ff6b6b;
+        }
+        
+        /* Game screens */
+        .screen {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .screen.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Film cards */
+        .film-card {
+            background: linear-gradient(145deg, rgba(30, 30, 30, 0.9), rgba(20, 20, 20, 0.9));
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            border-radius: 20px;
+            padding: 2rem;
+            margin-bottom: 1.5rem;
+            transition: all 0.3s ease;
+        }
+        
+        .film-card:hover {
+            border-color: rgba(255, 215, 0, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .film-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+        }
+        
+        .film-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .film-meta {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+        
+        .film-badge {
+            background: var(--locarno-yellow);
+            color: var(--locarno-black);
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .film-description {
+            color: var(--text-light);
+            line-height: 1.7;
+            margin-bottom: 1.5rem;
+            font-size: 0.95rem;
+        }
+        
+        .film-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+        }
+        
+        .tag {
+            background: rgba(255, 215, 0, 0.1);
+            color: var(--locarno-yellow);
+            padding: 0.35rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .film-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            padding: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+        
+        .film-stat {
+            text-align: center;
+        }
+        
+        .film-stat-value {
+            font-weight: 600;
+            color: var(--locarno-yellow);
+        }
+        
+        .film-stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+        }
+        
+        /* Buttons */
+        .btn-group {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .btn {
+            flex: 1;
+            padding: 1rem 1.5rem;
+            border: none;
+            border-radius: 12px;
+            font-family: inherit;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-accept {
+            background: linear-gradient(135deg, var(--locarno-yellow), #e6c200);
+            color: var(--locarno-black);
+        }
+        
+        .btn-accept:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+        }
+        
+        .btn-reject {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-light);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .btn-reject:hover {
+            background: rgba(255, 107, 53, 0.2);
+            border-color: var(--accent);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--locarno-yellow), #e6c200);
+            color: var(--locarno-black);
+            width: 100%;
+            padding: 1.25rem;
+            font-size: 1.1rem;
+        }
+        
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 30px rgba(255, 215, 0, 0.3);
+        }
+        
+        /* Intro screen */
+        .intro-text {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            color: var(--text-light);
+            margin-bottom: 2rem;
+        }
+        
+        .intro-text p {
+            margin-bottom: 1rem;
+        }
+        
+        .intro-highlight {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border-left: 3px solid var(--locarno-yellow);
+            margin: 1.5rem 0;
+        }
+        
+        /* Results screen */
+        .result-card {
+            background: linear-gradient(145deg, rgba(40, 40, 40, 0.9), rgba(25, 25, 25, 0.9));
+            border: 2px solid var(--locarno-yellow);
+            border-radius: 24px;
+            padding: 2.5rem 2rem;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .result-header {
+            margin-bottom: 2rem;
+        }
+        
+        .result-grade {
+            font-size: 5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--locarno-yellow), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+        }
+        
+        .result-title {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .result-summary {
+            color: var(--text-light);
+            line-height: 1.7;
+            text-align: left;
+        }
+        
+        .detailed-feedback {
+            margin-bottom: 2rem;
+        }
+        
+        .detailed-feedback h3 {
+            font-size: 1rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+        
+        .feedback-section {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 1.25rem 1.5rem;
+            border-radius: 12px;
+            margin-bottom: 0.75rem;
+            border-left: 3px solid var(--locarno-yellow);
+            color: var(--text-light);
+            line-height: 1.7;
+        }
+        
+        .feedback-section strong {
+            color: var(--locarno-yellow);
+            display: block;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .feedback-warning {
+            border-left-color: #ff4444;
+            background: rgba(255, 68, 68, 0.05);
+        }
+        
+        .feedback-warning strong {
+            color: #ff6b6b;
+        }
+        
+        .feedback-caution {
+            border-left-color: var(--accent);
+            background: rgba(255, 107, 53, 0.05);
+        }
+        
+        .feedback-caution strong {
+            color: var(--accent);
+        }
+        
+        .final-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+        }
+        
+        .final-stat {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 1.25rem;
+            border-radius: 12px;
+        }
+        
+        .final-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--locarno-yellow);
+        }
+        
+        .final-stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        /* Selected films list */
+        .selected-films {
+            margin-top: 2rem;
+        }
+        
+        .selected-films h3 {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        .selected-film-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+        }
+        
+        .selected-film-item span:first-child {
+            font-weight: 500;
+        }
+        
+        .selected-film-item span:last-child {
+            color: var(--text-muted);
+        }
+        
+        /* Piazza Grande visualization */
+        .piazza-visual {
+            margin: 2rem 0;
+            padding: 2rem;
+            background: linear-gradient(180deg, #1a1a3a 0%, #0d0d1a 100%);
+            border-radius: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stars {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60%;
+            background-image: 
+                radial-gradient(1px 1px at 10% 20%, white, transparent),
+                radial-gradient(1px 1px at 30% 40%, white, transparent),
+                radial-gradient(1.5px 1.5px at 50% 15%, white, transparent),
+                radial-gradient(1px 1px at 70% 35%, white, transparent),
+                radial-gradient(1px 1px at 85% 25%, white, transparent),
+                radial-gradient(1px 1px at 20% 50%, white, transparent),
+                radial-gradient(1.5px 1.5px at 60% 45%, white, transparent);
+        }
+        
+        .screen-projection {
+            width: 80%;
+            height: 120px;
+            margin: 0 auto 1.5rem;
+            background: linear-gradient(135deg, #2a2a4a, #1a1a3a);
+            border: 3px solid var(--locarno-yellow);
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+            color: var(--locarno-yellow);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            position: relative;
+        }
+        
+        .audience {
+            display: flex;
+            justify-content: center;
+            gap: 4px;
+            flex-wrap: wrap;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        
+        .audience-member {
+            width: 12px;
+            height: 16px;
+            background: var(--locarno-yellow);
+            border-radius: 50% 50% 0 0;
+            opacity: 0.6;
+            transition: opacity 0.3s;
+        }
+        
+        .audience-member.filled {
+            opacity: 1;
+        }
+        
+        /* Notifications */
+        .notification {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--locarno-black);
+            border: 1px solid var(--locarno-yellow);
+            padding: 1rem 1.5rem;
+            border-radius: 12px;
+            animation: slideIn 0.3s ease, slideOut 0.3s ease 2.7s;
+            z-index: 100;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        @keyframes slideOut {
+            from { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
+        /* Mobile responsive */
+        @media (max-width: 600px) {
+            .stats-bar {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .film-stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+            
+            .final-stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .feedback-section {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="leopard-bg"></div>
+    
+    <div class="container">
+        <header>
+            <div class="pardo-icon">🐆</div>
+            <h1>Pardo's Choice</h1>
+            <p class="subtitle">A Locarno Film Festival Programming Game</p>
+        </header>
+        
+        <!-- Intro Screen -->
+        <div id="intro-screen" class="screen active">
+            <div class="intro-text">
+                <p>Welcome to <strong>Piazza Grande</strong>, the legendary open-air cinema at the heart of the Locarno Film Festival. For one week each August, 8,000 people gather under the stars to discover cinema that challenges, provokes, and transforms.</p>
+                
+                <div class="intro-highlight">
+                    <strong>Your Mission:</strong> You've been appointed as this year's guest programmer. Curate 5 films for Piazza Grande from a selection of submissions. Balance artistic vision, audience appeal, and the business realities of running a major festival.
+                </div>
+                
+                <p>Each choice affects three scores: <strong>Critics</strong> (reviews, awards buzz, and artistic credibility), <strong>Audience</strong> (attendance, word-of-mouth, and popular appeal), and <strong>Industry</strong> (distributors, sales agents, sponsors, and market interest). The Pardo d'Oro awaits the programmer who can satisfy all three.</p>
+            </div>
+            
+            <button class="btn btn-primary" onclick="startGame()">Begin Programming</button>
+        </div>
+        
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen">
+            <div class="stats-bar">
+                <div class="stat">
+                    <div class="stat-value" id="critics">45</div>
+                    <div class="stat-label">Critics</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="audience">45</div>
+                    <div class="stat-label">Audience</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="industry">45</div>
+                    <div class="stat-label">Industry</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-value" id="slots">5</div>
+                    <div class="stat-label">Slots Left</div>
+                </div>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Programming Progress</span>
+                    <span id="progress-text">0 / 5 films selected</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="films-remaining" id="films-remaining">10 films remaining to review</div>
+            </div>
+            
+            <div id="film-container"></div>
+        </div>
+        
+        <!-- Results Screen -->
+        <div id="results-screen" class="screen">
+            <div class="result-card">
+                <div class="result-header">
+                    <div class="result-grade" id="final-grade">A</div>
+                    <h2 class="result-title" id="result-title">Festival Title</h2>
+                </div>
+                
+                <div class="final-stats">
+                    <div class="final-stat">
+                        <div class="final-stat-value" id="final-critics">0</div>
+                        <div class="final-stat-label">Critical Acclaim</div>
+                    </div>
+                    <div class="final-stat">
+                        <div class="final-stat-value" id="final-audience">0</div>
+                        <div class="final-stat-label">Audience Love</div>
+                    </div>
+                    <div class="final-stat">
+                        <div class="final-stat-value" id="final-industry">0</div>
+                        <div class="final-stat-label">Industry Interest</div>
+                    </div>
+                    <div class="final-stat">
+                        <div class="final-stat-value" id="final-total">0</div>
+                        <div class="final-stat-label">Overall Score</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="detailed-feedback">
+                <h3>Festival Debrief</h3>
+                <div id="result-summary"></div>
+            </div>
+            
+            <div class="piazza-visual">
+                <div class="stars"></div>
+                <div class="screen-projection">Piazza Grande</div>
+                <div class="audience" id="audience-visual"></div>
+            </div>
+            
+            <div class="selected-films">
+                <h3>Your Piazza Grande Selection</h3>
+                <div id="selected-films-list"></div>
+            </div>
+            
+            <button class="btn btn-primary" onclick="restartGame()" style="margin-top: 2rem;">Program Another Festival</button>
+        </div>
+    </div>
+
+    <script>
+        // Film database - with harder trade-offs for increased difficulty
+        // Critics = critical acclaim + discovering new voices (combined)
+        // Audience = popular appeal and attendance
+        // Industry = distributors, sales agents, sponsors, market interest
+        const films = [
+            {
+                title: "The Weight of Water",
+                director: "Amara Okonkwo",
+                country: "Nigeria/France",
+                year: 2026,
+                runtime: 147,
+                badge: "World Premiere",
+                description: "A lyrical meditation on displacement and memory, following three generations of women connected by the Niger River. Shot entirely on 16mm with non-professional actors from fishing communities, this debut feature transforms documentary observation into poetic reverie.",
+                tags: ["Slow Cinema", "Debut", "Documentary Hybrid"],
+                critics: 25,
+                audience: -18,
+                industry: -10,
+                type: "arthouse"
+            },
+            {
+                title: "CTRL+Z",
+                director: "Park Min-jun",
+                country: "South Korea",
+                year: 2026,
+                runtime: 118,
+                badge: "Competition",
+                description: "A tech startup employee discovers her company's AI can undo real-world events—but each reversal has devastating consequences. A razor-sharp thriller that doubles as a meditation on accountability in the algorithmic age.",
+                tags: ["Thriller", "AI Theme", "Genre"],
+                critics: 8,
+                audience: 18,
+                industry: 22,
+                type: "genre"
+            },
+            {
+                title: "Concrete Pastures",
+                director: "Helena Varga",
+                country: "Romania",
+                year: 2026,
+                runtime: 165,
+                badge: "International Premiere",
+                description: "Three hours in a Bucharest apartment complex, where residents prepare for a neighborhood meeting that may never happen. Varga's camera finds the profound in the mundane, crafting a symphony of waiting, longing, and quiet desperation.",
+                tags: ["Romanian New Wave", "Long Take", "Ensemble"],
+                critics: 28,
+                audience: -25,
+                industry: -15,
+                type: "arthouse"
+            },
+            {
+                title: "Neon Saints",
+                director: "Carlos Mendez",
+                country: "Mexico/USA",
+                year: 2026,
+                runtime: 95,
+                badge: "Piazza Grande",
+                description: "A vibrant, pulsating journey through Mexico City's underground drag scene, blending documentary footage with staged musical numbers. Think Almodóvar meets voguing, with a killer cumbia soundtrack.",
+                tags: ["Musical", "LGBTQ+", "Documentary Hybrid"],
+                critics: 12,
+                audience: 15,
+                industry: 10,
+                type: "crowd-pleaser"
+            },
+            {
+                title: "The Shepherd's Algorithm",
+                director: "Yorgos Xenakis",
+                country: "Greece/Germany",
+                year: 2026,
+                runtime: 132,
+                badge: "World Premiere",
+                description: "In a near-future Aegean island, an aging shepherd discovers that his flock has been replaced by robotic replicas. A Kafkaesque parable about authenticity and extinction, told with bone-dry humor and stunning compositions.",
+                tags: ["Sci-Fi", "Allegory", "Art Film"],
+                critics: 20,
+                audience: -8,
+                industry: 5,
+                type: "arthouse"
+            },
+            {
+                title: "Last Call at the Belvedere",
+                director: "James Whitmore",
+                country: "UK/Ireland",
+                year: 2026,
+                runtime: 108,
+                badge: "Competition",
+                description: "A charming ensemble piece set during the final night of a beloved Dublin pub. Old friends reunite, secrets emerge, and Guinness flows. Whitmore balances laughs and tears with theatrical precision.",
+                tags: ["Comedy-Drama", "Ensemble", "Single Location"],
+                critics: -8,
+                audience: 22,
+                industry: 18,
+                type: "crowd-pleaser"
+            },
+            {
+                title: "Frequency",
+                director: "Sarah Chen",
+                country: "Taiwan/Japan",
+                year: 2026,
+                runtime: 89,
+                badge: "First Feature",
+                description: "A sound designer becomes obsessed with capturing the 'frequency of grief' after her mother's death. Chen's debut is a sensory experience—part essay film, part ghost story—that plays with perception and mourning.",
+                tags: ["Experimental", "Sound Design", "Essay Film"],
+                critics: 24,
+                audience: -20,
+                industry: -12,
+                type: "experimental"
+            },
+            {
+                title: "The Magnificent Seven Samurai Remake Remake",
+                director: "Collective Anonymous",
+                country: "Internet",
+                year: 2026,
+                runtime: 210,
+                badge: "Special Screening",
+                description: "207 filmmakers from 43 countries each remake a scene from Kurosawa's classic using whatever means available—smartphones, animation, puppets, video games. A chaotic celebration of cinema's democratic future.",
+                tags: ["Experimental", "Crowdsourced", "Meta-Cinema"],
+                critics: 15,
+                audience: 8,
+                industry: -22,
+                type: "experimental"
+            },
+            {
+                title: "Inheritance",
+                director: "Fatima Al-Hassan",
+                country: "Morocco/Qatar",
+                year: 2026,
+                runtime: 124,
+                badge: "World Premiere",
+                description: "A forensic accountant returns to Casablanca to settle her father's estate, uncovering a labyrinth of secrets spanning decades of Moroccan history. A propulsive family mystery with political undertones.",
+                tags: ["Mystery", "Family Drama", "Political"],
+                critics: 14,
+                audience: 10,
+                industry: 12,
+                type: "quality"
+            },
+            {
+                title: "Ride or Die 3: Tokyo Terminus",
+                director: "Michael Bay",
+                country: "USA",
+                year: 2026,
+                runtime: 142,
+                badge: "Surprise Film",
+                description: "The explosive conclusion to the Ride or Die trilogy. Yes, it's Michael Bay, but hear us out: this is Bay at his most unhinged, a maximalist fever dream that accidentally becomes video art.",
+                tags: ["Action", "Blockbuster", "So Bad It's Good?"],
+                critics: -25,
+                audience: 28,
+                industry: 30,
+                type: "blockbuster"
+            },
+            {
+                title: "Vermeer's Dog",
+                director: "Chantal Beaumont",
+                country: "Belgium/Netherlands",
+                year: 2026,
+                runtime: 78,
+                badge: "Competition",
+                description: "A 78-minute single shot following a dog wandering through recreations of Vermeer paintings. Sounds like a gimmick; becomes transcendent. The definition of 'you have to see it to believe it.'",
+                tags: ["Art Film", "Single Take", "Conceptual"],
+                critics: 30,
+                audience: -22,
+                industry: -18,
+                type: "experimental"
+            },
+            {
+                title: "Border Town",
+                director: "Luis Arriaga",
+                country: "USA/Mexico",
+                year: 2026,
+                runtime: 115,
+                badge: "International Premiere",
+                description: "A border patrol agent and a migrant form an unlikely connection during a dangerous crossing. Arriaga avoids easy politics for something more human—a story about dignity on both sides of an invisible line.",
+                tags: ["Drama", "Immigration", "Human Interest"],
+                critics: 10,
+                audience: 12,
+                industry: 8,
+                type: "quality"
+            },
+            {
+                title: "Static",
+                director: "Anders Holm",
+                country: "Denmark/Sweden",
+                year: 2026,
+                runtime: 97,
+                badge: "World Premiere",
+                description: "A radio DJ broadcasts through the night of a major blackout, her voice becoming the only connection for a city in darkness. Minimalist chamber piece that unfolds entirely in a sound booth.",
+                tags: ["Chamber Drama", "Single Location", "Nordic"],
+                critics: 16,
+                audience: 5,
+                industry: 6,
+                type: "quality"
+            },
+            {
+                title: "The Disappeared",
+                director: "Lucia Ferrer",
+                country: "Argentina/Spain",
+                year: 2026,
+                runtime: 138,
+                badge: "Competition",
+                description: "Three timelines interweave as a journalist investigates disappearances spanning from the Dirty War to the present. Ambitious, novelistic filmmaking that demands attention but rewards it tenfold.",
+                tags: ["Political", "Non-Linear", "Historical"],
+                critics: 22,
+                audience: -12,
+                industry: 8,
+                type: "arthouse"
+            },
+            {
+                title: "Love in the Time of Algorithms",
+                director: "Sophie Martin",
+                country: "France/Canada",
+                year: 2026,
+                runtime: 104,
+                badge: "Piazza Grande",
+                description: "A charming romantic comedy about two people matched by AI who spend the film trying to prove the algorithm wrong. Light as meringue, but with surprising emotional depth in the final act.",
+                tags: ["Rom-Com", "AI Theme", "Feel-Good"],
+                critics: -15,
+                audience: 28,
+                industry: 25,
+                type: "crowd-pleaser"
+            }
+        ];
+
+        // Game state
+        let gameState = {
+            critics: 50,
+            audience: 50,
+            discovery: 50,
+            slotsRemaining: 5,
+            selectedFilms: [],
+            availableFilms: [],
+            currentFilmIndex: 0
+        };
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+
+        function startGame() {
+            // Reset game state - starting at 45 makes reaching high scores more challenging
+            gameState = {
+                critics: 45,
+                audience: 45,
+                industry: 45,
+                slotsRemaining: 5,
+                selectedFilms: [],
+                availableFilms: shuffleArray(films).slice(0, 10), // Pick 10 random films
+                currentFilmIndex: 0
+            };
+            
+            document.getElementById('intro-screen').classList.remove('active');
+            document.getElementById('game-screen').classList.add('active');
+            
+            updateStats();
+            showCurrentFilm();
+        }
+
+        function updateStats() {
+            document.getElementById('critics').textContent = Math.max(0, Math.min(100, gameState.critics));
+            document.getElementById('audience').textContent = Math.max(0, Math.min(100, gameState.audience));
+            document.getElementById('industry').textContent = Math.max(0, Math.min(100, gameState.industry));
+            document.getElementById('slots').textContent = gameState.slotsRemaining;
+            
+            const filmsSelected = 5 - gameState.slotsRemaining;
+            document.getElementById('progress-text').textContent = `${filmsSelected} / 5 films selected`;
+            document.getElementById('progress-fill').style.width = `${(filmsSelected / 5) * 100}%`;
+            
+            // Update films remaining indicator
+            const filmsLeft = gameState.availableFilms.length - gameState.currentFilmIndex;
+            const filmsRemainingEl = document.getElementById('films-remaining');
+            filmsRemainingEl.textContent = `${filmsLeft} film${filmsLeft !== 1 ? 's' : ''} remaining to review`;
+            
+            // Add warning colors if running low on films
+            filmsRemainingEl.classList.remove('warning', 'critical');
+            if (filmsLeft < gameState.slotsRemaining) {
+                filmsRemainingEl.classList.add('critical');
+                filmsRemainingEl.textContent += ' ⚠️ Not enough to fill program!';
+            } else if (filmsLeft <= gameState.slotsRemaining + 1) {
+                filmsRemainingEl.classList.add('warning');
+            }
+        }
+
+        function showCurrentFilm() {
+            const container = document.getElementById('film-container');
+            
+            if (gameState.slotsRemaining === 0 || gameState.currentFilmIndex >= gameState.availableFilms.length) {
+                showResults();
+                return;
+            }
+            
+            const film = gameState.availableFilms[gameState.currentFilmIndex];
+            
+            container.innerHTML = `
+                <div class="film-card">
+                    <div class="film-header">
+                        <div>
+                            <h2 class="film-title">${film.title}</h2>
+                            <p class="film-meta">${film.director} • ${film.country} • ${film.year} • ${film.runtime} min</p>
+                        </div>
+                        <span class="film-badge">${film.badge}</span>
+                    </div>
+                    
+                    <p class="film-description">${film.description}</p>
+                    
+                    <div class="film-tags">
+                        ${film.tags.map(tag => `<span class="tag">${tag}</span>`).join('')}
+                    </div>
+                    
+                    <div class="film-stats">
+                        <div class="film-stat">
+                            <div class="film-stat-value">${film.critics >= 0 ? '+' : ''}${film.critics}</div>
+                            <div class="film-stat-label">Critics</div>
+                        </div>
+                        <div class="film-stat">
+                            <div class="film-stat-value">${film.audience >= 0 ? '+' : ''}${film.audience}</div>
+                            <div class="film-stat-label">Audience</div>
+                        </div>
+                        <div class="film-stat">
+                            <div class="film-stat-value">${film.industry >= 0 ? '+' : ''}${film.industry}</div>
+                            <div class="film-stat-label">Industry</div>
+                        </div>
+                    </div>
+                    
+                    <div class="btn-group">
+                        <button class="btn btn-reject" onclick="rejectFilm()">Pass</button>
+                        <button class="btn btn-accept" onclick="acceptFilm()">Select for Piazza Grande</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function acceptFilm() {
+            const film = gameState.availableFilms[gameState.currentFilmIndex];
+            
+            gameState.critics = Math.max(0, Math.min(100, gameState.critics + film.critics));
+            gameState.audience = Math.max(0, Math.min(100, gameState.audience + film.audience));
+            gameState.industry = Math.max(0, Math.min(100, gameState.industry + film.industry));
+            gameState.slotsRemaining--;
+            gameState.selectedFilms.push(film);
+            
+            showNotification(`"${film.title}" added to your selection!`);
+            
+            gameState.currentFilmIndex++;
+            updateStats();
+            showCurrentFilm();
+        }
+
+        function rejectFilm() {
+            const film = gameState.availableFilms[gameState.currentFilmIndex];
+            showNotification(`Passed on "${film.title}"`);
+            
+            gameState.currentFilmIndex++;
+            showCurrentFilm();
+        }
+
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'notification';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        function generateDetailedFeedback(critics, audience, industry, balancePenalty, unfilledSlots) {
+            let sections = [];
+            
+            // Critics feedback (filmmakers + critics perspective) - 8 tiers
+            let criticsSection = '<div class="feedback-section"><strong>Critical Reception & Artistic Legacy</strong><br>';
+            if (critics >= 90) {
+                criticsSection += 'A landmark edition. Critics are calling this the most visionary programming Locarno has seen in a generation. Your selections will be studied in film schools. Filmmakers worldwide are clamoring for inclusion in your next edition, and Sight & Sound is already assembling a retrospective feature on your curatorial philosophy.';
+            } else if (critics >= 80) {
+                criticsSection += 'Your programming was a triumph of curatorial vision. Critics hailed this as one of Locarno\'s most artistically daring editions in years. Filmmakers are already inquiring about next year—your reputation for championing bold cinema has spread through the international festival circuit.';
+            } else if (critics >= 70) {
+                criticsSection += 'Critics responded warmly to your selections, praising your eye for emerging talent and willingness to take risks. Several filmmakers have expressed gratitude for the platform you provided. Your programming earned respect in cinephile circles.';
+            } else if (critics >= 60) {
+                criticsSection += 'Critical reception was generally positive, though not rapturous. Your programming showed promise and occasional brilliance. Critics noted a few inspired choices alongside safer selections. The artistic community sees potential in your approach.';
+            } else if (critics >= 50) {
+                criticsSection += 'Critics were politely underwhelmed. Your programming was competent but lacked a distinctive vision. Some emerging filmmakers felt overlooked, and reviews described the selection as "respectable but unremarkable." Room for growth.';
+            } else if (critics >= 40) {
+                criticsSection += 'Critical reception was disappointing. Your programming was seen as conservative and lacking in ambition—not what Locarno is known for. Several filmmakers who\'d hoped for exposure are now looking to other festivals.';
+            } else if (critics >= 25) {
+                criticsSection += 'Critics were largely negative. Major publications questioned your curatorial judgment, and filmmaker relationships have been strained. Locarno\'s reputation as a launchpad for new voices has taken a significant hit.';
+            } else {
+                criticsSection += 'The critical response was brutal. Your programming was savaged in the press, with reviewers questioning how these selections made it to Piazza Grande. Directors are distancing themselves from the festival, and Locarno\'s artistic credibility faces a long recovery.';
+            }
+            criticsSection += '</div>';
+            sections.push(criticsSection);
+            
+            // Audience feedback - 8 tiers
+            let audienceSection = '<div class="feedback-section"><strong>Audience Response & Public Engagement</strong><br>';
+            if (audience >= 90) {
+                audienceSection += 'The Piazza Grande witnessed something magical. Every screening was packed, with crowds gathering hours early. Standing ovations lasted for minutes, strangers embraced, and the collective experience of cinema felt restored. Local businesses reported their best August ever. You\'ve created memories that will define Locarno for years.';
+            } else if (audience >= 80) {
+                audienceSection += 'The Piazza Grande was electric every night. Standing ovations, sold-out screenings, and genuine emotional connections between films and viewers. Social media buzzed with enthusiasm, and local businesses reported excellent tourism. The people of Locarno are already asking what you\'ll bring next year.';
+            } else if (audience >= 70) {
+                audienceSection += 'Audiences responded positively overall. Most screenings were well-attended, with several films generating strong word-of-mouth. The atmosphere in the Piazza was warm and celebratory. Locarno\'s reputation as a festival for everyone—not just cinephiles—remains strong.';
+            } else if (audience >= 60) {
+                audienceSection += 'Audience reception was solid if unspectacular. Attendance was healthy for most screenings, though energy levels varied. Some films connected deeply while others left viewers uncertain. The general public seemed satisfied, if not thrilled.';
+            } else if (audience >= 50) {
+                audienceSection += 'Audience turnout was acceptable but uneven. Some screenings struggled to fill seats, and there were notable walkouts during more challenging selections. The general public seemed uncertain about what kind of festival Locarno wants to be.';
+            } else if (audience >= 40) {
+                audienceSection += 'The Piazza Grande saw too many empty seats this year. Audiences felt alienated by programming that seemed to prioritize obscurity over engagement. Local enthusiasm for the festival has waned, and casual filmgoers are questioning whether Locarno is "for them."';
+            } else if (audience >= 25) {
+                audienceSection += 'Audience reception was poor. Sparse attendance, visible walkouts, and frustrated locals wondering why the festival has lost its way. The communal joy that usually defines Piazza Grande screenings was notably absent.';
+            } else {
+                audienceSection += 'Audience reception was disastrous. Mass walkouts, near-empty screenings, and angry locals wondering what happened to their beloved festival. The Piazza Grande—normally a celebration—felt like an endurance test. Community goodwill has evaporated.';
+            }
+            audienceSection += '</div>';
+            sections.push(audienceSection);
+            
+            // Industry feedback (distributors + sponsors) - 8 tiers
+            let industrySection = '<div class="feedback-section"><strong>Industry Relations & Market Activity</strong><br>';
+            if (industry >= 90) {
+                industrySection += 'An extraordinary market edition. Distributors fought over acquisition rights, with bidding wars erupting for multiple titles. Sponsors are dramatically increasing their commitments, seeing Locarno as essential to their prestige. Sales agents are calling this the most productive edition in the festival\'s history. Your programming has elevated Locarno\'s commercial credibility to rival Cannes.';
+            } else if (industry >= 80) {
+                industrySection += 'Distributors were thrilled. Multiple films from your selection secured international distribution deals before the festival ended. Sponsors are increasing their commitments for next year, seeing Locarno as a premier market destination. Sales agents are calling this one of the most productive editions ever.';
+            } else if (industry >= 70) {
+                industrySection += 'The industry responded very well. Several significant acquisitions were made, and sponsors expressed strong satisfaction with their visibility. The festival\'s market side functioned excellently, strengthening Locarno\'s reputation as a place where serious business gets done.';
+            } else if (industry >= 60) {
+                industrySection += 'Industry activity was healthy. A good number of deals were struck, and sponsors were satisfied with networking opportunities. Distributors found some viable titles, though wished for more commercial options. The market buzz was positive.';
+            } else if (industry >= 50) {
+                industrySection += 'Industry activity was moderate. A few deals were struck, but distributors noted a lack of commercially viable titles. Sponsors fulfilled their obligations without particular enthusiasm. The market buzz was muted compared to competitor festivals.';
+            } else if (industry >= 40) {
+                industrySection += 'Distributors left largely empty-handed. Your programming, while perhaps artistically motivated, offered little for buyers seeking viable acquisitions. Sponsors are grumbling about ROI, and at least one major partner is reconsidering their involvement next year.';
+            } else if (industry >= 25) {
+                industrySection += 'Industry confidence is shaken. Distributors found almost nothing worth acquiring, sales agents considered the trip a waste, and sponsors are actively comparing Locarno unfavorably to other festivals. Several partnerships are now at risk.';
+            } else {
+                industrySection += 'The industry has lost confidence in Locarno. Distributors left empty-handed and frustrated, sales agents have written off the festival, and sponsors are terminating contracts. The financial foundations of the festival are in serious jeopardy.';
+            }
+            industrySection += '</div>';
+            sections.push(industrySection);
+            
+            // Specific balance commentary based on which metrics are high/low
+            if (balancePenalty >= 4) {
+                const metrics = [
+                    { name: 'Critics', value: critics },
+                    { name: 'Audience', value: audience },
+                    { name: 'Industry', value: industry }
+                ];
+                metrics.sort((a, b) => b.value - a.value);
+                
+                const highest = metrics[0];
+                const middle = metrics[1];
+                const lowest = metrics[2];
+                
+                let balanceMessage = '';
+                const severeImbalance = balancePenalty >= 8;
+                
+                // Check for different imbalance patterns
+                if (highest.value >= 70 && middle.value >= 70 && lowest.value < 50) {
+                    // Two high, one low
+                    balanceMessage = `Your festival excelled with ${highest.name} and ${middle.name}, but ${lowest.name} was severely neglected. `;
+                    if (lowest.name === 'Critics') {
+                        balanceMessage += 'While audiences and industry were satisfied, the artistic community felt ignored. A festival cannot thrive on commerce alone—critical credibility is essential for long-term prestige.';
+                    } else if (lowest.name === 'Audience') {
+                        balanceMessage += 'Critics and industry players were pleased, but the Piazza Grande felt empty. A festival that loses its public loses its soul—Locarno has always been about bringing cinema to the people.';
+                    } else {
+                        balanceMessage += 'Critics and audiences loved it, but without industry support, the festival\'s financial sustainability is threatened. Art needs patrons, and distributors need product.';
+                    }
+                } else if (highest.value >= 70 && middle.value < 55 && lowest.value < 55) {
+                    // One high, two low
+                    balanceMessage = `You focused heavily on ${highest.name} while both ${middle.name} and ${lowest.name} suffered. `;
+                    if (highest.name === 'Critics') {
+                        balanceMessage += 'Your artistic ambition was admirable, but a festival needs audiences to fill seats and industry to pay the bills. Pure cinephilia doesn\'t keep the lights on.';
+                    } else if (highest.name === 'Audience') {
+                        balanceMessage += 'Crowds were happy, but critics dismissed your programming as pandering, and distributors found nothing of substance. Populism without artistry or commerce is unsustainable.';
+                    } else {
+                        balanceMessage += 'You ran a successful market, but critics were scathing and audiences stayed home. A festival cannot be merely a trade show—it needs artistic credibility and public engagement.';
+                    }
+                } else {
+                    // General imbalance
+                    balanceMessage = `Your programming leaned heavily toward ${highest.name} (${highest.value}) at the expense of ${lowest.name} (${lowest.value}). Locarno\'s strength has always been its ability to serve multiple constituencies—next time, seek greater harmony.`;
+                }
+                
+                const warningClass = severeImbalance ? 'feedback-warning' : 'feedback-caution';
+                const warningIcon = severeImbalance ? '⚠️ ' : '';
+                sections.push(`<div class="feedback-section ${warningClass}"><strong>${warningIcon}Programming Imbalance</strong><br>${balanceMessage}</div>`);
+            }
+            
+            // Unfilled slots penalty feedback
+            if (unfilledSlots > 0) {
+                let unfilledMessage = '';
+                if (unfilledSlots === 1) {
+                    unfilledMessage = 'You left one program slot unfilled. The empty evening in Piazza Grande was awkward—audiences had gathered expecting a film, and the silence spoke volumes. A programmer must complete their slate.';
+                } else if (unfilledSlots === 2) {
+                    unfilledMessage = `You left ${unfilledSlots} program slots unfilled. Multiple empty evenings at Piazza Grande created confusion and frustration. Audiences felt cheated, and the press questioned your commitment to the role.`;
+                } else if (unfilledSlots >= 3) {
+                    unfilledMessage = `You left ${unfilledSlots} program slots unfilled—a near-total abdication of your programming duties. The festival was forced to scramble for replacements. Your reputation as a programmer may not recover from this.`;
+                }
+                sections.push(`<div class="feedback-section feedback-warning"><strong>⚠️ Incomplete Program</strong><br>${unfilledMessage}</div>`);
+            }
+            
+            return sections.join('');
+        }
+
+        function showResults() {
+            document.getElementById('game-screen').classList.remove('active');
+            document.getElementById('results-screen').classList.add('active');
+            
+            const totalScore = Math.round((gameState.critics + gameState.audience + gameState.industry) / 3);
+            
+            // Calculate balance bonus - reward programmers who don't neglect any category
+            const minStat = Math.min(gameState.critics, gameState.audience, gameState.industry);
+            const maxStat = Math.max(gameState.critics, gameState.audience, gameState.industry);
+            const balancePenalty = Math.floor((maxStat - minStat) / 5); // Penalty for imbalanced programming
+            
+            // Penalty for unfilled program slots
+            const unfilledSlots = gameState.slotsRemaining;
+            const unfilledPenalty = unfilledSlots * 12; // Significant penalty per empty slot
+            
+            const adjustedScore = totalScore - balancePenalty - unfilledPenalty;
+            
+            let grade, title;
+            
+            if (adjustedScore >= 95 && minStat >= 65) {
+                grade = "A+";
+                title = "The Leopard's Pride";
+            } else if (adjustedScore >= 90) {
+                grade = "A";
+                title = "Piazza Perfection";
+            } else if (adjustedScore >= 80) {
+                grade = "B+";
+                title = "A Strong Edition";
+            } else if (adjustedScore >= 70) {
+                grade = "B";
+                title = "Solid Programming";
+            } else if (adjustedScore >= 60) {
+                grade = "C+";
+                title = "Uneven Nights";
+            } else if (adjustedScore >= 50) {
+                grade = "C";
+                title = "Mixed Reviews";
+            } else if (adjustedScore >= 40) {
+                grade = "D";
+                title = "The Empty Piazza";
+            } else {
+                grade = "F";
+                title = "Festival in Crisis";
+            }
+            
+            document.getElementById('final-grade').textContent = grade;
+            document.getElementById('result-title').textContent = title;
+            document.getElementById('final-critics').textContent = gameState.critics;
+            document.getElementById('final-audience').textContent = gameState.audience;
+            document.getElementById('final-industry').textContent = gameState.industry;
+            
+            // Generate detailed metric-specific feedback
+            const detailedFeedback = generateDetailedFeedback(gameState.critics, gameState.audience, gameState.industry, balancePenalty, unfilledSlots);
+            document.getElementById('result-summary').innerHTML = detailedFeedback;
+            
+            // Show penalty breakdown in total score
+            let penaltyText = '';
+            if (balancePenalty > 0 || unfilledPenalty > 0) {
+                const totalPenalty = balancePenalty + unfilledPenalty;
+                penaltyText = ` (−${totalPenalty})`;
+            }
+            document.getElementById('final-total').textContent = adjustedScore + penaltyText;
+            
+            // Populate audience visualization
+            const audienceContainer = document.getElementById('audience-visual');
+            audienceContainer.innerHTML = '';
+            const audienceSize = Math.floor(gameState.audience / 2);
+            for (let i = 0; i < 50; i++) {
+                const member = document.createElement('div');
+                member.className = 'audience-member' + (i < audienceSize ? ' filled' : '');
+                audienceContainer.appendChild(member);
+            }
+            
+            // Populate selected films list
+            const filmsList = document.getElementById('selected-films-list');
+            filmsList.innerHTML = gameState.selectedFilms.map(film => `
+                <div class="selected-film-item">
+                    <span>${film.title}</span>
+                    <span>${film.director} (${film.country})</span>
+                </div>
+            `).join('');
+        }
+
+        function restartGame() {
+            document.getElementById('results-screen').classList.remove('active');
+            document.getElementById('intro-screen').classList.add('active');
+        }
+    </script>
+</body>
+</html>
